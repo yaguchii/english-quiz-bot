@@ -4,11 +4,13 @@ import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.response.BotApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import retrofit2.Response;
 
+@Slf4j
 @RestController
 @RequestMapping("/push")
 public class PushController {
@@ -27,7 +29,7 @@ public class PushController {
                 .build()
                 .pushMessage(pushMessage)
                 .execute();
-        System.out.println(response.code() + " " + response.message());
+        log.info(response.code() + " " + response.message());
         return response.code() + " " + response.message();
     }
 
