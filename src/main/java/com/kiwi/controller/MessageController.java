@@ -40,7 +40,7 @@ public class MessageController {
         log.info("Text message event: " + event);
 
         if (event.getMessage().getText().equals("銀座")) {
-            justPush(event, "銀座のお店をご紹介します。");
+            justPush(event, "銀座のお店をご紹介しますぜ、社長。");
 
             Jedis jedis = getConnection();
 
