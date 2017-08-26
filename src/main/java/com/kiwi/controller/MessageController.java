@@ -10,6 +10,7 @@ import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.event.Event;
 import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
+import com.linecorp.bot.model.event.source.GroupSource;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.template.CarouselColumn;
@@ -40,6 +41,7 @@ public class MessageController {
         log.info("Text message event: " + event);
 
         if (event.getMessage().getText().equals("銀座")) {
+
             justPush(event, "銀座のお店をご紹介しますぜ、社長。");
 
             Jedis jedis = getConnection();
@@ -97,7 +99,7 @@ public class MessageController {
 
         TextMessage textMessage = new TextMessage(message);
         PushMessage pushMessage = new PushMessage(
-                event.getSource().getUserId(),
+                event.getSource().getSenderId(),
                 textMessage
         );
         Response<BotApiResponse> response =
