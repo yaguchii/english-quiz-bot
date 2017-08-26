@@ -22,48 +22,69 @@
     </properties>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/com.linecorp.bot/line-bot-api-client -->
         <dependency>
             <groupId>com.linecorp.bot</groupId>
             <artifactId>line-bot-api-client</artifactId>
             <version>1.8.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.linecorp.bot/line-bot-servlet -->
         <dependency>
             <groupId>com.linecorp.bot</groupId>
             <artifactId>line-bot-servlet</artifactId>
             <version>1.8.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.linecorp.bot/line-bot-model -->
         <dependency>
             <groupId>com.linecorp.bot</groupId>
             <artifactId>line-bot-model</artifactId>
             <version>1.8.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.linecorp.bot/line-bot-spring-boot -->
         <dependency>
             <groupId>com.linecorp.bot</groupId>
             <artifactId>line-bot-spring-boot</artifactId>
             <version>1.8.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-autoconfigure -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
             <version>1.5.6.RELEASE</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>1.5.6.RELEASE</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.16.18</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-redis</artifactId>
+            <version>1.8.6.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
+            <version>1.13.6.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.6.3</version>
         </dependency>
     </dependencies>
 
