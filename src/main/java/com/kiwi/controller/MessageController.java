@@ -84,7 +84,6 @@ public class MessageController {
             HashMap<String, String> map = new HashMap<>();
             map.put("displayName", profile.getDisplayName());
             map.put("pictureUrl", profile.getPictureUrl());
-            map.put("statusMessage", profile.getStatusMessage());
             jedis.hmset("userId:" + event.getSource().getUserId(), map);
 
         } else {
