@@ -1,12 +1,2 @@
-spring.redis:
-  host: ec2-34-227-145-196.compute-1.amazonaws.com
-  port: 44649
-  password: pb840c9970bb8247494be55e905bd3a396b1b7a49ceeabaccb971f115c32647c3
-  database: 0
-  pool:
-    max-idle: 8
-    min-idle: 0
-    max-active: 8
-    max-wait: -1
-server:
-    port: 9000
+#server:
+#    port: 9000
