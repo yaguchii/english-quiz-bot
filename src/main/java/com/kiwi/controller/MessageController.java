@@ -81,7 +81,7 @@ public class MessageController {
             if (areaMap.containsKey(postbackEvent.getPostbackContent().getData())) {
                 String areaNameEn = postbackEvent.getPostbackContent().getData();
                 String areaNameJp = areaMap.get(areaNameEn);
-                sendMessage(postbackEvent.getSource().getSenderId(), areaNameJp + "のお店をご紹介しますぜ、社長。");
+//                sendMessage(postbackEvent.getSource().getSenderId(), areaNameJp + "のお店をご紹介しますぜ、社長。");
                 sendCarouselMessage(postbackEvent.getReplyToken(), "gourmet:" + areaNameEn);
             }
 
