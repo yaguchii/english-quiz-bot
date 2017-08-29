@@ -182,7 +182,7 @@ public class MessageController {
 
         Jedis jedis = getConnection();
         List<CarouselColumn> columns = new ArrayList<>();
-        List<String> storeLlist = jedis.hvals(key);
+        List<String> storeLlist = jedis.lrange(key, 0, -1);
 
         for (String storeJson : storeLlist) {
             log.info(storeJson);
