@@ -21,9 +21,12 @@ import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.BidiMap;
+import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import redis.clients.jedis.Jedis;
 import retrofit2.Response;
 
+import javax.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,42 +37,52 @@ import java.util.Map;
 @LineMessageHandler
 public class MessageController {
 
-    private static Jedis getConnection() throws Exception {
+    private static Jedis jedis;
+
+    @PostConstruct
+    public void init() throws Exception {
         URI redisURI = new URI(System.getenv("REDIS_URL"));
-        return new Jedis(redisURI);
+        jedis = new Jedis(redisURI);
     }
 
     @EventMapping
     public void eventHandle(Event event) throws Exception {
 
         if (event instanceof MessageEvent) {
-//            final MessageEvent<TextMessageContent> messageEvent = (MessageEvent<TextMessageContent>) event;
+            final MessageEvent<?> messageEvent = (MessageEvent<?>) event;
             log.info("Text Event start");
-            handleTextMessageEvent((MessageEvent<TextMessageContent>) event);
+            if (((MessageEvent) messageEvent).getMessage() instanceof TextMessageContent) {
+                handleTextMessageEvent((MessageEvent<TextMessageContent>) event);
+            }
 
         } else if (event instanceof UnfollowEvent) {
             UnfollowEvent unfollowEvent = (UnfollowEvent) event;
             //handleUnfollowEvent(unfollowEvent);
+
         } else if (event instanceof FollowEvent) {
             FollowEvent followEvent = (FollowEvent) event;
             //reply(handleFollowEvent(followEvent));
+
         } else if (event instanceof JoinEvent) {
             final JoinEvent joinEvent = (JoinEvent) event;
             //reply(handleJoinEvent(joinEvent));
+
         } else if (event instanceof LeaveEvent) {
             final LeaveEvent leaveEvent = (LeaveEvent) event;
             //handleLeaveEvent(leaveEvent);
+
         } else if (event instanceof PostbackEvent) {
             final PostbackEvent postbackEvent = (PostbackEvent) event;
             //reply(handlePostbackEvent(postbackEvent));
             log.info("Postback Event start");
 
-            if (postbackEvent.getPostbackContent().getData().equals("ginza")) {
-                Jedis jedis = getConnection();
-                setUserProfile(event, jedis);
-
-                sendMessage(postbackEvent.getSource().getSenderId(), "銀座のお店をご紹介しますぜ、社長。");
-                sendCarouselMessage(postbackEvent.getReplyToken(), jedis, "gourmet:ginza");
+            // area存在チェック
+            Map<String, String> areaMap = jedis.hgetAll("area");
+            if (areaMap.containsKey(postbackEvent.getPostbackContent().getData())) {
+                String areaNameEn = postbackEvent.getPostbackContent().getData();
+                String areaNameJp = areaMap.get(areaNameEn);
+                sendMessage(postbackEvent.getSource().getSenderId(), areaNameJp + "のお店をご紹介しますぜ、社長。");
+                sendCarouselMessage(postbackEvent.getReplyToken(), "gourmet:" + areaNameEn);
             }
 
         } else if (event instanceof BeaconEvent) {
@@ -78,13 +91,13 @@ public class MessageController {
         }
     }
 
-    private void setUserProfile(Event event, Jedis jedis) throws Exception {
+    private void setUserProfile(String userId) throws Exception {
 
         Response<UserProfileResponse> response =
                 LineMessagingServiceBuilder
                         .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
                         .build()
-                        .getProfile(event.getSource().getUserId())
+                        .getProfile(userId)
                         .execute();
         if (response.isSuccessful()) {
             UserProfileResponse profile = response.body();
@@ -95,7 +108,7 @@ public class MessageController {
             HashMap<String, String> map = new HashMap<>();
             map.put("displayName", profile.getDisplayName());
             map.put("pictureUrl", profile.getPictureUrl());
-            jedis.hmset("userId:" + event.getSource().getUserId(), map);
+            jedis.hmset("userId:" + userId, map);
 
         } else {
             log.info(response.code() + " " + response.message());
@@ -105,43 +118,69 @@ public class MessageController {
     private void handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws Exception {
         log.info("Text message event: " + event);
 
-        if (event.getMessage().getText().equals("銀座")) {
+        // area存在チェック
+        Map<String, String> areaMap = jedis.hgetAll("area");
 
-            // ○○をご案内いたしましょうか？ Yes, No
-            List<Action> actions = new ArrayList<>();
-            PostbackAction postbackAction = new PostbackAction(
-                    "Yes",
-                    "ginza",
-                    "Yes");
-            MessageAction messageAction = new MessageAction(
-                    "No",
-                    "No");
+        if (areaMap.containsValue(event.getMessage().getText())) {
+            // areaに含まれる
 
-            actions.add(postbackAction);
-            actions.add(messageAction);
+            String areaNameJp = event.getMessage().getText();
+            BidiMap bidiMap = new DualHashBidiMap(areaMap);
+            String areaNameEn = bidiMap.getKey(areaNameJp).toString();
 
-            ConfirmTemplate confirmTemplate = new ConfirmTemplate("銀座のお店をご案内したします。よろしいですか？", actions);
+            if (jedis.exists("gourmet:" + areaNameEn)) {
+                // 1件以上お店情報がある場合
 
-            TemplateMessage templateMessage = new TemplateMessage(
-                    "this is a confirm template",
-                    confirmTemplate);
+                // profile取得
+                setUserProfile(event.getSource().getUserId());
 
-            ReplyMessage replyMessage = new ReplyMessage(
-                    event.getReplyToken(),
-                    templateMessage
-            );
-            Response<BotApiResponse> response =
-                    LineMessagingServiceBuilder
-                            .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
-                            .build()
-                            .replyMessage(replyMessage)
-                            .execute();
-            log.info(response.code() + " " + response.message());
+                // ○○をご案内いたしましょうか？ Yes, No
+                sendConfirmMessage(event.getReplyToken(), areaNameJp, areaNameEn);
 
+            } else {
+                // areaにはあるが、お店情報が存在しない場合
+                // nothing
+            }
+
+        } else {
+            // areaに含まれない場合
+            // nothing
         }
     }
 
-    private void sendCarouselMessage(String replyToken, Jedis jedis, String key) throws Exception {
+    private void sendConfirmMessage(String replyToken, String areaNameJp, String areaNameEn) throws Exception {
+
+        List<Action> actions = new ArrayList<>();
+        PostbackAction postbackAction = new PostbackAction(
+                "Yes",
+                areaNameEn,
+                "Yes");
+        MessageAction messageAction = new MessageAction(
+                "No",
+                "No");
+
+        actions.add(postbackAction);
+        actions.add(messageAction);
+
+        ConfirmTemplate confirmTemplate = new ConfirmTemplate(areaNameJp + "のお店をご案内したします。よろしいですか？", actions);
+        TemplateMessage templateMessage = new TemplateMessage(
+                "this is a confirm template",
+                confirmTemplate);
+
+        ReplyMessage replyMessage = new ReplyMessage(
+                replyToken,
+                templateMessage
+        );
+        Response<BotApiResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .replyMessage(replyMessage)
+                        .execute();
+        log.info(response.code() + " " + response.message());
+    }
+
+    private void sendCarouselMessage(String replyToken, String key) throws Exception {
         List<CarouselColumn> columns = new ArrayList<>();
         Map<String, String> map = jedis.hgetAll(key);
 
@@ -204,10 +243,5 @@ public class MessageController {
                         .execute();
         log.info(response.code() + " " + response.message());
     }
-//
-//    @EventMapping
-//    public void handleDefaultMessageEvent(Event event) {
-//        log.info("event: " + event);
-//    }
 
 }
