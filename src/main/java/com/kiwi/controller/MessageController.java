@@ -47,7 +47,7 @@ public class MessageController {
         if (event instanceof MessageEvent) {
             final MessageEvent<?> messageEvent = (MessageEvent<?>) event;
             log.info("Text Event start");
-            if (((MessageEvent) messageEvent).getMessage() instanceof TextMessageContent) {
+            if (messageEvent.getMessage() instanceof TextMessageContent) {
                 handleTextMessageEvent((MessageEvent<TextMessageContent>) event);
             }
 
