@@ -6,6 +6,8 @@ import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.action.Action;
+import com.linecorp.bot.model.action.MessageAction;
+import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.event.*;
 import com.linecorp.bot.model.event.message.TextMessageContent;
@@ -13,6 +15,7 @@ import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.template.CarouselColumn;
 import com.linecorp.bot.model.message.template.CarouselTemplate;
+import com.linecorp.bot.model.message.template.ConfirmTemplate;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
@@ -61,6 +64,14 @@ public class MessageController {
             //reply(handlePostbackEvent(postbackEvent));
             log.info("Postback Event start");
 
+            if (postbackEvent.getPostbackContent().getData().equals("ginza")) {
+                Jedis jedis = getConnection();
+                setUserProfile(event, jedis);
+
+                sendMessage(postbackEvent.getSource().getSenderId(), "銀座のお店をご紹介しますぜ、社長。");
+                sendCarouselMessage(postbackEvent.getReplyToken(), jedis, "gourmet:ginza");
+            }
+
         } else if (event instanceof BeaconEvent) {
             final BeaconEvent beaconEvent = (BeaconEvent) event;
             //reply(handleBeaconEvent(beaconEvent));
@@ -95,15 +106,42 @@ public class MessageController {
         log.info("Text message event: " + event);
 
         if (event.getMessage().getText().equals("銀座")) {
-            Jedis jedis = getConnection();
-            setUserProfile(event, jedis);
 
-            sendMessage(event, "銀座のお店をご紹介しますぜ、社長。");
-            sendCarouselMessage(event, jedis, "gourmet:ginza");
+            // ○○をご案内いたしましょうか？ Yes, No
+            List<Action> actions = new ArrayList<>();
+            PostbackAction postbackAction = new PostbackAction(
+                    "Yes",
+                    "ginza",
+                    "Yes");
+            MessageAction messageAction = new MessageAction(
+                    "No",
+                    "No");
+
+            actions.add(postbackAction);
+            actions.add(messageAction);
+
+            ConfirmTemplate confirmTemplate = new ConfirmTemplate("銀座のお店をご案内したします。よろしいですか？", actions);
+
+            TemplateMessage templateMessage = new TemplateMessage(
+                    "this is a confirm template",
+                    confirmTemplate);
+
+            ReplyMessage replyMessage = new ReplyMessage(
+                    event.getReplyToken(),
+                    templateMessage
+            );
+            Response<BotApiResponse> response =
+                    LineMessagingServiceBuilder
+                            .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                            .build()
+                            .replyMessage(replyMessage)
+                            .execute();
+            log.info(response.code() + " " + response.message());
+
         }
     }
 
-    private void sendCarouselMessage(MessageEvent<TextMessageContent> event, Jedis jedis, String key) throws Exception {
+    private void sendCarouselMessage(String replyToken, Jedis jedis, String key) throws Exception {
         List<CarouselColumn> columns = new ArrayList<>();
         Map<String, String> map = jedis.hgetAll(key);
 
@@ -123,7 +161,7 @@ public class MessageController {
                 carouselTemplate);
 
         ReplyMessage replyMessage = new ReplyMessage(
-                event.getReplyToken(),
+                replyToken,
                 templateMessage
         );
         Response<BotApiResponse> response =
@@ -151,11 +189,11 @@ public class MessageController {
                 actions);
     }
 
-    private void sendMessage(MessageEvent<TextMessageContent> event, String message) throws Exception {
+    private void sendMessage(String destination, String message) throws Exception {
 
         TextMessage textMessage = new TextMessage(message);
         PushMessage pushMessage = new PushMessage(
-                event.getSource().getSenderId(),
+                destination,
                 textMessage
         );
         Response<BotApiResponse> response =
