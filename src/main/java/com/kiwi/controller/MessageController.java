@@ -21,9 +21,12 @@ import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.BidiMap;
+import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import redis.clients.jedis.Jedis;
 import retrofit2.Response;
 
+import javax.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,9 +37,12 @@ import java.util.Map;
 @LineMessageHandler
 public class MessageController {
 
-    private static Jedis getConnection() throws Exception {
+    private static Jedis con;
+
+    @PostConstruct
+    public void init() throws Exception {
         URI redisURI = new URI(System.getenv("REDIS_URL"));
-        return new Jedis(redisURI);
+        con = new Jedis(redisURI);
     }
 
     @EventMapping
@@ -50,26 +56,31 @@ public class MessageController {
         } else if (event instanceof UnfollowEvent) {
             UnfollowEvent unfollowEvent = (UnfollowEvent) event;
             //handleUnfollowEvent(unfollowEvent);
+
         } else if (event instanceof FollowEvent) {
             FollowEvent followEvent = (FollowEvent) event;
             //reply(handleFollowEvent(followEvent));
+
         } else if (event instanceof JoinEvent) {
             final JoinEvent joinEvent = (JoinEvent) event;
             //reply(handleJoinEvent(joinEvent));
+
         } else if (event instanceof LeaveEvent) {
             final LeaveEvent leaveEvent = (LeaveEvent) event;
             //handleLeaveEvent(leaveEvent);
+
         } else if (event instanceof PostbackEvent) {
             final PostbackEvent postbackEvent = (PostbackEvent) event;
             //reply(handlePostbackEvent(postbackEvent));
             log.info("Postback Event start");
 
-            if (postbackEvent.getPostbackContent().getData().equals("ginza")) {
-                Jedis jedis = getConnection();
-                setUserProfile(event, jedis);
-
-                sendMessage(postbackEvent.getSource().getSenderId(), "銀座のお店をご紹介しますぜ、社長。");
-                sendCarouselMessage(postbackEvent.getReplyToken(), jedis, "gourmet:ginza");
+            // area存在チェック
+            Map<String, String> areaMap = con.hgetAll("area");
+            if (areaMap.containsKey(postbackEvent.getPostbackContent().getData())) {
+                String areaNameEn = postbackEvent.getPostbackContent().getData();
+                String areaNameJp = areaMap.get(areaNameEn);
+                sendMessage(postbackEvent.getSource().getSenderId(), areaNameJp + "のお店をご紹介しますぜ、社長。");
+                sendCarouselMessage(postbackEvent.getReplyToken(), "gourmet:" + areaNameEn);
             }
 
         } else if (event instanceof BeaconEvent) {
@@ -78,13 +89,13 @@ public class MessageController {
         }
     }
 
-    private void setUserProfile(Event event, Jedis jedis) throws Exception {
+    private void setUserProfile(String userId) throws Exception {
 
         Response<UserProfileResponse> response =
                 LineMessagingServiceBuilder
                         .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
                         .build()
-                        .getProfile(event.getSource().getUserId())
+                        .getProfile(userId)
                         .execute();
         if (response.isSuccessful()) {
             UserProfileResponse profile = response.body();
@@ -95,7 +106,7 @@ public class MessageController {
             HashMap<String, String> map = new HashMap<>();
             map.put("displayName", profile.getDisplayName());
             map.put("pictureUrl", profile.getPictureUrl());
-            jedis.hmset("userId:" + event.getSource().getUserId(), map);
+            con.hmset("userId:" + userId, map);
 
         } else {
             log.info(response.code() + " " + response.message());
@@ -105,13 +116,24 @@ public class MessageController {
     private void handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws Exception {
         log.info("Text message event: " + event);
 
-        if (event.getMessage().getText().equals("銀座")) {
+        // area存在チェック
+        Map<String, String> areaMap = con.hgetAll("area");
+
+        if (areaMap.containsValue(event.getMessage().getText())) {
+            // areaに含まれる場合
+
+            // profile取得
+            setUserProfile(event.getSource().getUserId());
+
+            String areaNameJp = event.getMessage().getText();
+            BidiMap bidiMap = new DualHashBidiMap(areaMap);
+            String areaNameEn = bidiMap.getKey(areaNameJp).toString();
 
             // ○○をご案内いたしましょうか？ Yes, No
             List<Action> actions = new ArrayList<>();
             PostbackAction postbackAction = new PostbackAction(
                     "Yes",
-                    "ginza",
+                    areaNameEn,
                     "Yes");
             MessageAction messageAction = new MessageAction(
                     "No",
@@ -120,8 +142,7 @@ public class MessageController {
             actions.add(postbackAction);
             actions.add(messageAction);
 
-            ConfirmTemplate confirmTemplate = new ConfirmTemplate("銀座のお店をご案内したします。よろしいですか？", actions);
-
+            ConfirmTemplate confirmTemplate = new ConfirmTemplate(areaNameJp + "のお店をご案内したします。よろしいですか？", actions);
             TemplateMessage templateMessage = new TemplateMessage(
                     "this is a confirm template",
                     confirmTemplate);
@@ -138,12 +159,15 @@ public class MessageController {
                             .execute();
             log.info(response.code() + " " + response.message());
 
+        } else {
+            // areaに含まれない場合
+            // nothing
         }
     }
 
-    private void sendCarouselMessage(String replyToken, Jedis jedis, String key) throws Exception {
+    private void sendCarouselMessage(String replyToken, String key) throws Exception {
         List<CarouselColumn> columns = new ArrayList<>();
-        Map<String, String> map = jedis.hgetAll(key);
+        Map<String, String> map = con.hgetAll(key);
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             log.info(entry.getKey());
@@ -204,10 +228,5 @@ public class MessageController {
                         .execute();
         log.info(response.code() + " " + response.message());
     }
-//
-//    @EventMapping
-//    public void handleDefaultMessageEvent(Event event) {
-//        log.info("event: " + event);
-//    }
 
 }
