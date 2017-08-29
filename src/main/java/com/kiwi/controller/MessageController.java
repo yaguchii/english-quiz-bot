@@ -114,6 +114,8 @@ public class MessageController {
 
     private void handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws Exception {
         log.info("Text message event: " + event);
+        log.info("SenderId: " + event.getSource().getSenderId());
+        log.info("UserId: " + event.getSource().getUserId());
 
         // area存在チェック
         Jedis jedis = getConnection();
