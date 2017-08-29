@@ -130,7 +130,7 @@ public class MessageController {
                 // 1件以上お店情報がある場合
 
                 // profile取得
-                setUserProfile(event.getSource().getUserId());
+//                setUserProfile(event.getSource().getUserId());
 
                 // ○○をご案内いたしましょうか？ Yes, No
                 sendConfirmMessage(event.getReplyToken(), areaNameJp, areaNameEn);
