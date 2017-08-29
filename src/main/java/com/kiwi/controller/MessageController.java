@@ -179,17 +179,14 @@ public class MessageController {
     }
 
     private void sendCarouselMessage(String replyToken, String key) throws Exception {
+
         Jedis jedis = getConnection();
         List<CarouselColumn> columns = new ArrayList<>();
-        Map<String, String> map = jedis.hgetAll(key);
+        List<String> storeLlist = jedis.hvals(key);
 
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            log.info(entry.getKey());
-            log.info(entry.getValue());
-
-            ObjectMapper mapper = new ObjectMapper();
-            String jsonInString = entry.getValue();
-            CarouselColumn carouselColumn = createCarouselColumn(mapper, jsonInString);
+        for (String storeJson : storeLlist) {
+            log.info(storeJson);
+            CarouselColumn carouselColumn = createCarouselColumn(storeJson);
             columns.add(carouselColumn);
         }
 
@@ -211,7 +208,8 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
-    private CarouselColumn createCarouselColumn(ObjectMapper mapper, String jsonInString) throws java.io.IOException {
+    private CarouselColumn createCarouselColumn(String jsonInString) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
         CarouselInfo carouselInfo = mapper.readValue(jsonInString, CarouselInfo.class);
 
         List<Action> actions = new ArrayList<>();
