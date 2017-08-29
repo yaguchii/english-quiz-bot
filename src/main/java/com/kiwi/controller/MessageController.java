@@ -1,7 +1,7 @@
 package com.kiwi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kiwi.model.CarouselInfo;
+import com.kiwi.model.ShopInfo;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
@@ -120,7 +120,7 @@ public class MessageController {
         Map<String, String> areaMap = jedis.hgetAll("area");
 
         if (areaMap.containsValue(event.getMessage().getText())) {
-            // areaに含まれる
+            // areaに含まれる場合
 
             String areaNameJp = event.getMessage().getText();
             BidiMap bidiMap = new DualHashBidiMap(areaMap);
@@ -210,18 +210,18 @@ public class MessageController {
 
     private CarouselColumn createCarouselColumn(String jsonInString) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        CarouselInfo carouselInfo = mapper.readValue(jsonInString, CarouselInfo.class);
+        ShopInfo shopInfo = mapper.readValue(jsonInString, ShopInfo.class);
 
         List<Action> actions = new ArrayList<>();
         URIAction uriAction = new URIAction(
                 "View detail",
-                carouselInfo.getUri());
+                shopInfo.getUri());
         actions.add(uriAction);
 
         return new CarouselColumn(
-                carouselInfo.getThumbnailImageUrl(),
-                carouselInfo.getTitle(),
-                carouselInfo.getText(),
+                shopInfo.getThumbnailImageUrl(),
+                shopInfo.getTitle(),
+                shopInfo.getText(),
                 actions);
     }
 
