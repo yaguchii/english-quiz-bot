@@ -26,7 +26,6 @@ import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import redis.clients.jedis.Jedis;
 import retrofit2.Response;
 
-import javax.annotation.PostConstruct;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,12 +36,9 @@ import java.util.Map;
 @LineMessageHandler
 public class MessageController {
 
-    private static Jedis jedis;
-
-    @PostConstruct
-    public void init() throws Exception {
+    private static Jedis getConnection() throws Exception {
         URI redisURI = new URI(System.getenv("REDIS_URL"));
-        jedis = new Jedis(redisURI);
+        return new Jedis(redisURI);
     }
 
     @EventMapping
@@ -77,6 +73,7 @@ public class MessageController {
             log.info("Postback Event start");
 
             // area存在チェック
+            Jedis jedis = getConnection();
             Map<String, String> areaMap = jedis.hgetAll("area");
             if (areaMap.containsKey(postbackEvent.getPostbackContent().getData())) {
                 String areaNameEn = postbackEvent.getPostbackContent().getData();
@@ -92,7 +89,7 @@ public class MessageController {
     }
 
     private void setUserProfile(String userId) throws Exception {
-
+        Jedis jedis = getConnection();
         Response<UserProfileResponse> response =
                 LineMessagingServiceBuilder
                         .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
@@ -119,6 +116,7 @@ public class MessageController {
         log.info("Text message event: " + event);
 
         // area存在チェック
+        Jedis jedis = getConnection();
         Map<String, String> areaMap = jedis.hgetAll("area");
 
         if (areaMap.containsValue(event.getMessage().getText())) {
@@ -181,6 +179,7 @@ public class MessageController {
     }
 
     private void sendCarouselMessage(String replyToken, String key) throws Exception {
+        Jedis jedis = getConnection();
         List<CarouselColumn> columns = new ArrayList<>();
         Map<String, String> map = jedis.hgetAll(key);
 
