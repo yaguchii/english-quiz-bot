@@ -117,6 +117,11 @@ public class MessageController {
         log.info("SenderId: " + event.getSource().getSenderId());
         log.info("UserId: " + event.getSource().getUserId());
 
+        // ユーザ情報取得
+        if (event.getSource().getUserId() != null) {
+            setUserProfile(event.getSource().getUserId());
+        }
+
         // area存在チェック
         Jedis jedis = getConnection();
         Map<String, String> areaMap = jedis.hgetAll("area");
