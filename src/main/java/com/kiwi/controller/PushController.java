@@ -4,6 +4,7 @@ import com.kiwi.postgre.ConnectionProvider;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.message.TextMessage;
+import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.linecorp.bot.model.response.BotApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,8 +54,12 @@ public class PushController {
             System.out.println(rs.getString("thumbnailImageUrl"));
         }
 
-        stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url) VALUES ('user00001', 'a@a.a', 'ccc') ON CONFLICT (user_id) DO UPDATE SET display_name = 'zzzzzzzz', picture_url = 'zzzzzzzz'");
+        String userId = "userId";
+        UserProfileResponse profile = new UserProfileResponse("aaaaaaaaaaa", "ddddddddddd", "CCCCCCCCCCC", "ddddddddddddd");
 
+        stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message) " +
+                "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "') " +
+                "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "'");
     }
 
 }
