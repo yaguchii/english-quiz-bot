@@ -1,7 +1,7 @@
 package com.kiwi.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.model.ShopInfo;
+import com.kiwi.postgre.ConnectionProvider;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
@@ -21,25 +21,17 @@ import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.BidiMap;
-import org.apache.commons.collections.bidimap.DualHashBidiMap;
-import redis.clients.jedis.Jedis;
 import retrofit2.Response;
 
-import java.net.URI;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @LineMessageHandler
 public class MessageController {
-
-    private static Jedis getConnection() throws Exception {
-        URI redisURI = new URI(System.getenv("REDIS_URL"));
-        return new Jedis(redisURI);
-    }
 
     @EventMapping
     public void eventHandle(Event event) throws Exception {
@@ -73,42 +65,16 @@ public class MessageController {
             log.info("Postback Event start");
 
             // area存在チェック
-            Jedis jedis = getConnection();
-            Map<String, String> areaMap = jedis.hgetAll("area");
-            if (areaMap.containsKey(postbackEvent.getPostbackContent().getData())) {
-                String areaNameEn = postbackEvent.getPostbackContent().getData();
-                String areaNameJp = areaMap.get(areaNameEn);
-//                sendMessage(postbackEvent.getSource().getSenderId(), areaNameJp + "のお店をご紹介しますぜ、社長。");
-                sendCarouselMessage(postbackEvent.getReplyToken(), "gourmet:" + areaNameEn);
-            }
+            String postackData = postbackEvent.getPostbackContent().getData();
+            ConnectionProvider connectionProvider = new ConnectionProvider();
+            Connection connection = connectionProvider.getConnection();
+            Statement stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + postackData + "'");
+            sendCarouselMessage(postbackEvent.getReplyToken(), rs);
 
         } else if (event instanceof BeaconEvent) {
             final BeaconEvent beaconEvent = (BeaconEvent) event;
             //reply(handleBeaconEvent(beaconEvent));
-        }
-    }
-
-    private void setUserProfile(String userId) throws Exception {
-        Jedis jedis = getConnection();
-        Response<UserProfileResponse> response =
-                LineMessagingServiceBuilder
-                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
-                        .build()
-                        .getProfile(userId)
-                        .execute();
-        if (response.isSuccessful()) {
-            UserProfileResponse profile = response.body();
-            log.info(profile.getDisplayName());
-            log.info(profile.getPictureUrl());
-            log.info(profile.getStatusMessage());
-
-            HashMap<String, String> map = new HashMap<>();
-            map.put("displayName", profile.getDisplayName());
-            map.put("pictureUrl", profile.getPictureUrl());
-            jedis.hmset("userId:" + userId, map);
-
-        } else {
-            log.info(response.code() + " " + response.message());
         }
     }
 
@@ -117,48 +83,32 @@ public class MessageController {
         log.info("SenderId: " + event.getSource().getSenderId());
         log.info("UserId: " + event.getSource().getUserId());
 
+        // connection
+        ConnectionProvider connectionProvider = new ConnectionProvider();
+        Connection connection = connectionProvider.getConnection();
+
         // ユーザ情報取得
-        if (event.getSource().getUserId() != null) {
-            setUserProfile(event.getSource().getUserId());
+        if (event.getSource().getSenderId() != null) {
+            setUserProfile(event.getSource().getSenderId(), connection);
         }
 
         // area存在チェック
-        Jedis jedis = getConnection();
-        Map<String, String> areaMap = jedis.hgetAll("area");
-
-        if (areaMap.containsValue(event.getMessage().getText())) {
-            // areaに含まれる場合
-
-            String areaNameJp = event.getMessage().getText();
-            BidiMap bidiMap = new DualHashBidiMap(areaMap);
-            String areaNameEn = bidiMap.getKey(areaNameJp).toString();
-
-            if (jedis.exists("gourmet:" + areaNameEn)) {
-                // 1件以上お店情報がある場合
-
-                // profile取得
-//                setUserProfile(event.getSource().getUserId());
-
-                // ○○をご案内いたしましょうか？ Yes, No
-                sendConfirmMessage(event.getReplyToken(), areaNameJp, areaNameEn);
-
-            } else {
-                // areaにはあるが、お店情報が存在しない場合
-                // nothing
-            }
-
-        } else {
-            // areaに含まれない場合
-            // nothing
+        String text = event.getMessage().getText();
+        Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
+        if (rs.next()) {
+            // データが1件以上あり
+            // ○○をご案内いたしましょうか？ Yes, No
+            sendConfirmMessage(event.getReplyToken(), text);
         }
     }
 
-    private void sendConfirmMessage(String replyToken, String areaNameJp, String areaNameEn) throws Exception {
+    private void sendConfirmMessage(String replyToken, String area) throws Exception {
 
         List<Action> actions = new ArrayList<>();
         PostbackAction postbackAction = new PostbackAction(
                 "Yes",
-                areaNameEn,
+                area,
                 "Yes");
         MessageAction messageAction = new MessageAction(
                 "No",
@@ -167,7 +117,7 @@ public class MessageController {
         actions.add(postbackAction);
         actions.add(messageAction);
 
-        ConfirmTemplate confirmTemplate = new ConfirmTemplate(areaNameJp + "のお店をご案内したします。よろしいですか？", actions);
+        ConfirmTemplate confirmTemplate = new ConfirmTemplate(area + "のお店をご案内したします。よろしいですか？", actions);
         TemplateMessage templateMessage = new TemplateMessage(
                 "this is a confirm template",
                 confirmTemplate);
@@ -185,15 +135,16 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
-    private void sendCarouselMessage(String replyToken, String key) throws Exception {
+    private void sendCarouselMessage(String replyToken, ResultSet rs) throws Exception {
 
-        Jedis jedis = getConnection();
         List<CarouselColumn> columns = new ArrayList<>();
-        List<String> storeLlist = jedis.lrange(key, 0, -1);
-
-        for (String storeJson : storeLlist) {
-            log.info(storeJson);
-            CarouselColumn carouselColumn = createCarouselColumn(storeJson);
+        while (rs.next()) {
+            ShopInfo shopInfo = new ShopInfo();
+            shopInfo.setTitle(rs.getString("title"));
+            shopInfo.setUri(rs.getString("uri"));
+            shopInfo.setText(rs.getString("text"));
+            shopInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            CarouselColumn carouselColumn = createCarouselColumn(shopInfo);
             columns.add(carouselColumn);
         }
 
@@ -215,9 +166,7 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
-    private CarouselColumn createCarouselColumn(String jsonInString) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        ShopInfo shopInfo = mapper.readValue(jsonInString, ShopInfo.class);
+    private CarouselColumn createCarouselColumn(ShopInfo shopInfo) throws Exception {
 
         List<Action> actions = new ArrayList<>();
         URIAction uriAction = new URIAction(
@@ -230,6 +179,28 @@ public class MessageController {
                 shopInfo.getTitle(),
                 shopInfo.getText(),
                 actions);
+    }
+
+    private void setUserProfile(String userId, Connection connection) throws Exception {
+        Response<UserProfileResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .getProfile(userId)
+                        .execute();
+        if (response.isSuccessful()) {
+            UserProfileResponse profile = response.body();
+            log.info(profile.getDisplayName());
+            log.info(profile.getPictureUrl());
+            log.info(profile.getStatusMessage());
+
+            Statement stmt = connection.createStatement();
+            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message) " +
+                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "') " +
+                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "'");
+        } else {
+            log.info(response.code() + " " + response.message());
+        }
     }
 
     private void sendMessage(String destination, String message) throws Exception {
