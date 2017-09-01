@@ -64,13 +64,17 @@ public class MessageController {
             //reply(handlePostbackEvent(postbackEvent));
             log.info("Postback Event start");
 
-            // area存在チェック
             String postackData = postbackEvent.getPostbackContent().getData();
+
             ConnectionProvider connectionProvider = new ConnectionProvider();
             Connection connection = connectionProvider.getConnection();
-            Statement stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + postackData + "'");
+
             sendCarouselMessage(postbackEvent.getReplyToken(), rs);
+
+            stmt.close();
+            connection.close();
 
         } else if (event instanceof BeaconEvent) {
             final BeaconEvent beaconEvent = (BeaconEvent) event;
@@ -87,20 +91,23 @@ public class MessageController {
         ConnectionProvider connectionProvider = new ConnectionProvider();
         Connection connection = connectionProvider.getConnection();
 
-        // ユーザ情報取得
-        if (event.getSource().getSenderId() != null) {
-            setUserProfile(event.getSource().getSenderId(), connection);
-        }
-
         // area存在チェック
         String text = event.getMessage().getText();
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
         if (rs.next()) {
             // データが1件以上あり
+
+            // ユーザ情報取得
+            if (event.getSource().getSenderId() != null) {
+                setUserProfile(event.getSource().getSenderId(), connection);
+            }
+
             // ○○をご案内いたしましょうか？ Yes, No
             sendConfirmMessage(event.getReplyToken(), text);
         }
+        stmt.close();
+        connection.close();
     }
 
     private void sendConfirmMessage(String replyToken, String area) throws Exception {
@@ -190,10 +197,6 @@ public class MessageController {
                         .execute();
         if (response.isSuccessful()) {
             UserProfileResponse profile = response.body();
-            log.info(profile.getDisplayName());
-            log.info(profile.getPictureUrl());
-            log.info(profile.getStatusMessage());
-
             Statement stmt = connection.createStatement();
             stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message) " +
                     "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "') " +
