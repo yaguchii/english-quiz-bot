@@ -94,18 +94,10 @@ public class MessageController {
 
         // area存在チェック
         String text = event.getMessage().getText();
-        Statement stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "'");
-        while (rs.next()) {
-            log.info(rs.getString("title"));
-            log.info(rs.getString("uri"));
-            log.info(rs.getString("text"));
-            log.info(rs.getString("thumbnailImageUrl"));
-        }
-        rs.last();
-        int number_of_row = rs.getRow();
-        if (number_of_row > 0) {
-            // 指定された対象データ1件以上あり
+        Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
+        if (rs.next()) {
+            // データが1件以上あり
             // ○○をご案内いたしましょうか？ Yes, No
             sendConfirmMessage(event.getReplyToken(), text);
         }
