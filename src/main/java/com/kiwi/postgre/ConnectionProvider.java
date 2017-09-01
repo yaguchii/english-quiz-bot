@@ -22,7 +22,6 @@ public class ConnectionProvider {
                 + dbUri.getPort()
                 + dbUri.getPath()
                 + "?sslmode=require&ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory";
-        System.out.println(dbUrl);
         return DriverManager.getConnection(dbUrl, username, password);
     }
 }

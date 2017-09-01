@@ -21,15 +21,12 @@ import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.extern.slf4j.Slf4j;
-import redis.clients.jedis.Jedis;
 import retrofit2.Response;
 
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
@@ -81,43 +78,45 @@ public class MessageController {
         }
     }
 
-//    private void setUserProfile(String userId) throws Exception {
-//        Response<UserProfileResponse> response =
-//                LineMessagingServiceBuilder
-//                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
-//                        .build()
-//                        .getProfile(userId)
-//                        .execute();
-//        if (response.isSuccessful()) {
-//            UserProfileResponse profile = response.body();
-//            log.info(profile.getDisplayName());
-//            log.info(profile.getPictureUrl());
-//            log.info(profile.getStatusMessage());
-//
-//            HashMap<String, String> map = new HashMap<>();
-//            map.put("displayName", profile.getDisplayName());
-//            map.put("pictureUrl", profile.getPictureUrl());
-//            jedis.hmset("userId:" + userId, map);
-//
-//        } else {
-//            log.info(response.code() + " " + response.message());
-//        }
-//    }
+    private void setUserProfile(String userId, Connection connection) throws Exception {
+        Response<UserProfileResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .getProfile(userId)
+                        .execute();
+        if (response.isSuccessful()) {
+            UserProfileResponse profile = response.body();
+            log.info(profile.getDisplayName());
+            log.info(profile.getPictureUrl());
+            log.info(profile.getStatusMessage());
+
+            Statement stmt = connection.createStatement();
+            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url) " +
+                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "') " +
+                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "'");
+
+        } else {
+            log.info(response.code() + " " + response.message());
+        }
+    }
 
     private void handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws Exception {
         log.info("Text message event: " + event);
         log.info("SenderId: " + event.getSource().getSenderId());
         log.info("UserId: " + event.getSource().getUserId());
 
+        // connection
+        ConnectionProvider connectionProvider = new ConnectionProvider();
+        Connection connection = connectionProvider.getConnection();
+
         // ユーザ情報取得
-//        if (event.getSource().getUserId() != null) {
-//            setUserProfile(event.getSource().getUserId());
-//        }
+        if (event.getSource().getSenderId() != null) {
+            setUserProfile(event.getSource().getSenderId(), connection);
+        }
 
         // area存在チェック
         String text = event.getMessage().getText();
-        ConnectionProvider connectionProvider = new ConnectionProvider();
-        Connection connection = connectionProvider.getConnection();
         Statement stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
         ResultSet rs = stmt.executeQuery("SELECT * FROM SHOPS WHERE area = '" + text + "'");
         while (rs.next()) {
