@@ -107,7 +107,9 @@ public class MessageController {
         Connection connection = connectionProvider.getConnection();
         Statement stmt = connection.createStatement();
 
-        if (event.getMessage().getText().equals("quiz") || event.getMessage().getText().equals("クイズ")) {
+        if (event.getMessage().getText().equals("quiz") ||
+                event.getMessage().getText().equals("Quiz")||
+                event.getMessage().getText().equals("クイズ")) {
 
             sendMessage(event.getSource().getSenderId(), "Choose a category.");
 
@@ -121,7 +123,7 @@ public class MessageController {
         }
 
         if (event.getMessage().getText().equals("end")) {
-            sendMessage(event.getSource().getSenderId(), "Thank you!");
+            sendMessage(event.getSource().getSenderId(), "Thank you for playing. see you!");
         }
 
         stmt.close();
