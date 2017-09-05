@@ -69,11 +69,17 @@ public class MessageController {
             Connection connection = connectionProvider.getConnection();
             Statement stmt = connection.createStatement();
 
-            // 指定されたcategoryからランダムで1件取得する
-            ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
+            if (postackData.equals("wrong") || postackData.equals("correct")) {
+                // quiz結果の処理
+                sendMessage(event.getSource().getSenderId(), postackData);
 
-            sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
-            sendImageCarouselMessage(postbackEvent.getReplyToken(), rs);
+            } else {
+                // 指定されたcategoryからランダムで5件取得する
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
+
+//            sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
+                sendImageCarouselMessageForQeustion(postbackEvent.getReplyToken(), rs, event);
+            }
 
             stmt.close();
             connection.close();
@@ -105,22 +111,6 @@ public class MessageController {
             sendImageCarouselMessage(event.getReplyToken(), rs);
         }
 
-
-//        // area存在チェック
-//        String text = event.getMessage().getText();
-//        Statement stmt = connection.createStatement();
-//        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
-//        if (rs.next()) {
-//            // データが1件以上あり
-//
-//            // ユーザ情報取得
-//            if (event.getSource().getSenderId() != null) {
-//                setUserProfile(event.getSource().getSenderId(), connection);
-//            }
-//
-//            // ○○をご案内いたしましょうか？ Yes, No
-//            sendConfirmMessage(event.getReplyToken(), text);
-//        }
         stmt.close();
         connection.close();
     }
@@ -157,14 +147,45 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
+    private void sendImageCarouselMessageForQeustion(String replyToken, ResultSet rs, Event event) throws Exception {
+
+        List<ImageCarouselColumn> columns = new ArrayList<>();
+        while (rs.next()) {
+            QuizInfo quizInfo = new QuizInfo();
+            quizInfo.setCategory(rs.getString("category"));
+            quizInfo.setName(rs.getString("name"));
+            quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            ImageCarouselColumn imageCarouselColumn = createImageCarouselColumnForQuestion(quizInfo);
+            columns.add(imageCarouselColumn);
+        }
+
+//         ランダムにnameを取得し質問する。answerのcolumnsのdataとtextをsuccessに書き換える
+        sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
+
+        ImageCarouselTemplate imageCarouselTemplate = new ImageCarouselTemplate(columns);
+        TemplateMessage templateMessage = new TemplateMessage(
+                "this is a image carousel template",
+                imageCarouselTemplate);
+
+        ReplyMessage replyMessage = new ReplyMessage(
+                replyToken,
+                templateMessage
+        );
+        Response<BotApiResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .replyMessage(replyMessage)
+                        .execute();
+        log.info(response.code() + " " + response.message());
+    }
+
+
     private void sendImageCarouselMessage(String replyToken, ResultSet rs) throws Exception {
 
         List<ImageCarouselColumn> columns = new ArrayList<>();
         while (rs.next()) {
             QuizInfo quizInfo = new QuizInfo();
-//            quizInfo.setTitle(rs.getString("title"));
-//            quizInfo.setUri(rs.getString("uri"));
-//            quizInfo.setText(rs.getString("text"));
             quizInfo.setCategory(rs.getString("category"));
             quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
             ImageCarouselColumn imageCarouselColumn = createImageCarouselColumn(quizInfo);
@@ -237,7 +258,19 @@ public class MessageController {
 
     private ImageCarouselColumn createImageCarouselColumn(QuizInfo quizInfo) throws Exception {
 
-        Action action = new PostbackAction("label", "animal", "text");
+        Action action = new PostbackAction(quizInfo.getCategory(),
+                quizInfo.getCategory(),
+                quizInfo.getCategory() + "quiz start!");
+
+        return new ImageCarouselColumn(
+                quizInfo.getThumbnailImageUrl(),
+                action);
+    }
+
+    private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
+
+        Action action = new PostbackAction("label",
+                "wrong");
 
         return new ImageCarouselColumn(
                 quizInfo.getThumbnailImageUrl(),
