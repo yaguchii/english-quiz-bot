@@ -1,20 +1,18 @@
 package com.kiwi.controller;
 
 import com.kiwi.model.QuizInfo;
-import com.kiwi.model.ShopInfo;
 import com.kiwi.postgre.ConnectionProvider;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.action.Action;
-import com.linecorp.bot.model.action.MessageAction;
 import com.linecorp.bot.model.action.PostbackAction;
-import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.event.*;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
-import com.linecorp.bot.model.message.template.*;
+import com.linecorp.bot.model.message.template.ImageCarouselColumn;
+import com.linecorp.bot.model.message.template.ImageCarouselTemplate;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
@@ -27,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Slf4j
 @LineMessageHandler
@@ -115,52 +114,32 @@ public class MessageController {
         connection.close();
     }
 
-    private void sendConfirmMessage(String replyToken, String area) throws Exception {
-
-        List<Action> actions = new ArrayList<>();
-        PostbackAction postbackAction = new PostbackAction(
-                "Yes",
-                area,
-                "Yes");
-        MessageAction messageAction = new MessageAction(
-                "No",
-                "No");
-
-        actions.add(postbackAction);
-        actions.add(messageAction);
-
-        ConfirmTemplate confirmTemplate = new ConfirmTemplate(area + "のお店をご案内したします。よろしいですか？", actions);
-        TemplateMessage templateMessage = new TemplateMessage(
-                "this is a confirm template",
-                confirmTemplate);
-
-        ReplyMessage replyMessage = new ReplyMessage(
-                replyToken,
-                templateMessage
-        );
-        Response<BotApiResponse> response =
-                LineMessagingServiceBuilder
-                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
-                        .build()
-                        .replyMessage(replyMessage)
-                        .execute();
-        log.info(response.code() + " " + response.message());
-    }
-
     private void sendImageCarouselMessageForQeustion(String replyToken, ResultSet rs, Event event) throws Exception {
 
         List<ImageCarouselColumn> columns = new ArrayList<>();
+        List<QuizInfo> quizInfos = new ArrayList<>();
         while (rs.next()) {
             QuizInfo quizInfo = new QuizInfo();
             quizInfo.setCategory(rs.getString("category"));
             quizInfo.setName(rs.getString("name"));
             quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
             ImageCarouselColumn imageCarouselColumn = createImageCarouselColumnForQuestion(quizInfo);
+
             columns.add(imageCarouselColumn);
+            quizInfos.add(quizInfo);
         }
 
-//         ランダムにnameを取得し質問する。answerのcolumnsのdataとtextをsuccessに書き換える
-        sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
+        // ランダムにnameを取得し質問する。answerのcolumnsのdataとtextをcorrectに書き換える
+        Random rand = new Random();
+        int num = rand.nextInt(4);
+        String answerName = quizInfos.get(num).getName();
+        String imageUrl = quizInfos.get(num).getThumbnailImageUrl();
+        sendMessage(event.getSource().getSenderId(), "Which is " + answerName + "?");
+
+        Action action = new PostbackAction("label", "correct");
+        ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(imageUrl, action);
+
+        columns.set(num, imageCarouselColumn);
 
         ImageCarouselTemplate imageCarouselTemplate = new ImageCarouselTemplate(columns);
         TemplateMessage templateMessage = new TemplateMessage(
@@ -210,57 +189,11 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
-    private void sendCarouselMessage(String replyToken, ResultSet rs) throws Exception {
-
-        List<CarouselColumn> columns = new ArrayList<>();
-        while (rs.next()) {
-            ShopInfo shopInfo = new ShopInfo();
-            shopInfo.setTitle(rs.getString("title"));
-            shopInfo.setUri(rs.getString("uri"));
-            shopInfo.setText(rs.getString("text"));
-            shopInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
-            CarouselColumn carouselColumn = createCarouselColumn(shopInfo);
-            columns.add(carouselColumn);
-        }
-
-        CarouselTemplate carouselTemplate = new CarouselTemplate(columns);
-        TemplateMessage templateMessage = new TemplateMessage(
-                "this is a carousel template",
-                carouselTemplate);
-
-        ReplyMessage replyMessage = new ReplyMessage(
-                replyToken,
-                templateMessage
-        );
-        Response<BotApiResponse> response =
-                LineMessagingServiceBuilder
-                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
-                        .build()
-                        .replyMessage(replyMessage)
-                        .execute();
-        log.info(response.code() + " " + response.message());
-    }
-
-    private CarouselColumn createCarouselColumn(ShopInfo shopInfo) throws Exception {
-
-        List<Action> actions = new ArrayList<>();
-        URIAction uriAction = new URIAction(
-                "View detail",
-                shopInfo.getUri());
-        actions.add(uriAction);
-
-        return new CarouselColumn(
-                shopInfo.getThumbnailImageUrl(),
-                shopInfo.getTitle(),
-                shopInfo.getText(),
-                actions);
-    }
-
     private ImageCarouselColumn createImageCarouselColumn(QuizInfo quizInfo) throws Exception {
 
         Action action = new PostbackAction(quizInfo.getCategory(),
                 quizInfo.getCategory(),
-                quizInfo.getCategory() + "quiz start!");
+                quizInfo.getCategory() + " quiz start!");
 
         return new ImageCarouselColumn(
                 quizInfo.getThumbnailImageUrl(),
