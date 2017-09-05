@@ -107,7 +107,7 @@ public class MessageController {
         Connection connection = connectionProvider.getConnection();
         Statement stmt = connection.createStatement();
 
-        if (event.getMessage().getText().equals("quiz")|| event.getMessage().getText().equals("クイズ")) {
+        if (event.getMessage().getText().equals("quiz") || event.getMessage().getText().equals("クイズ")) {
 
             sendMessage(event.getSource().getSenderId(), "Choose a category.");
 
@@ -143,14 +143,14 @@ public class MessageController {
             quizInfos.add(quizInfo);
         }
 
-        // ランダムにnameを取得し質問する。answerのcolumnsのdataとtextをcorrectに書き換える
+        // quizInfosからランダムに正解を選び、ユーザに質問する
         Random rand = new Random();
         int num = rand.nextInt(4);
         QuizInfo quizInfo = quizInfos.get(num);
 
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
 
-        Action action = new PostbackAction("label", quizInfo.getCategory() + ":You got it!");
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":You got it!");
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
