@@ -68,13 +68,17 @@ public class MessageController {
             Connection connection = connectionProvider.getConnection();
             Statement stmt = connection.createStatement();
 
-            if (postackData.contains("wrong") || postackData.contains("correct")) {
+            if (postackData.contains("Wrong!") || postackData.contains("You got it!")) {
                 // postackData is like "dog:wrong"
                 String category = postackData.split(":")[0];
                 String result = postackData.split(":")[1];
 
                 // 同じカテゴリでクイズ継続
+                // send "correct" or "wrong"
                 sendMessage(event.getSource().getSenderId(), result);
+                // send "Next question."
+                sendMessage(event.getSource().getSenderId(), "OK.Next question.");
+
                 ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 5");
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
@@ -103,9 +107,9 @@ public class MessageController {
         Connection connection = connectionProvider.getConnection();
         Statement stmt = connection.createStatement();
 
-        if (event.getMessage().getText().equals("クイズ")) {
+        if (event.getMessage().getText().equals("quiz")|| event.getMessage().getText().equals("クイズ")) {
 
-            sendMessage(event.getSource().getSenderId(), "遊びたいカテゴリを選んでね！");
+            sendMessage(event.getSource().getSenderId(), "Choose a category.");
 
             // ユーザ情報取得
             if (event.getSource().getSenderId() != null) {
@@ -116,8 +120,8 @@ public class MessageController {
             sendImageCarouselMessage(event.getReplyToken(), rs);
         }
 
-        if (event.getMessage().getText().equals("クイズ終わり")) {
-            sendMessage(event.getSource().getSenderId(), "遊んでくれてありがとう！");
+        if (event.getMessage().getText().equals("end")) {
+            sendMessage(event.getSource().getSenderId(), "Thank you!");
         }
 
         stmt.close();
@@ -146,7 +150,7 @@ public class MessageController {
 
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
 
-        Action action = new PostbackAction("label", quizInfo.getCategory() + ":correct");
+        Action action = new PostbackAction("label", quizInfo.getCategory() + ":You got it!");
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
@@ -200,23 +204,13 @@ public class MessageController {
     }
 
     private ImageCarouselColumn createImageCarouselColumn(QuizInfo quizInfo) throws Exception {
-
-        Action action = new PostbackAction(quizInfo.getCategory(),
-                quizInfo.getCategory(),
-                quizInfo.getCategory() + " quiz start!");
-
-        return new ImageCarouselColumn(
-                quizInfo.getThumbnailImageUrl(),
-                action);
+        Action action = new PostbackAction(quizInfo.getCategory(), quizInfo.getCategory(), quizInfo.getCategory() + " quiz start!");
+        return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
     private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
-
-        Action action = new PostbackAction("label", quizInfo.getCategory() + ":wrong");
-
-        return new ImageCarouselColumn(
-                quizInfo.getThumbnailImageUrl(),
-                action);
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":Wrong!");
+        return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
     private void setUserProfile(String userId, Connection connection) throws Exception {
