@@ -76,13 +76,12 @@ public class MessageController {
                 // 同じカテゴリでクイズ継続
                 sendMessage(event.getSource().getSenderId(), result);
                 ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 5");
-                sendImageCarouselMessageForQeustion(postbackEvent.getReplyToken(), rs, event);
+                sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
                 // 指定されたcategoryからランダムで5件取得する
                 ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
-
-                sendImageCarouselMessageForQeustion(postbackEvent.getReplyToken(), rs, event);
+                sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
             }
 
             stmt.close();
@@ -125,7 +124,7 @@ public class MessageController {
         connection.close();
     }
 
-    private void sendImageCarouselMessageForQeustion(String replyToken, ResultSet rs, Event event) throws Exception {
+    private void sendImageCarouselMessageForQuestion(String replyToken, ResultSet rs, Event event) throws Exception {
 
         List<ImageCarouselColumn> columns = new ArrayList<>();
         List<QuizInfo> quizInfos = new ArrayList<>();
@@ -144,9 +143,10 @@ public class MessageController {
         Random rand = new Random();
         int num = rand.nextInt(4);
         QuizInfo quizInfo = quizInfos.get(num);
+
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
 
-        Action action = new PostbackAction("", quizInfo.getCategory() + ":correct");
+        Action action = new PostbackAction("label", quizInfo.getCategory() + ":correct");
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
