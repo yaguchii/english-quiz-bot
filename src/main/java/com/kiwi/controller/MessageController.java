@@ -212,7 +212,7 @@ public class MessageController {
 
     private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
 
-        Action action = new PostbackAction("", quizInfo.getCategory() + ":wrong");
+        Action action = new PostbackAction("label", quizInfo.getCategory() + ":wrong");
 
         return new ImageCarouselColumn(
                 quizInfo.getThumbnailImageUrl(),
