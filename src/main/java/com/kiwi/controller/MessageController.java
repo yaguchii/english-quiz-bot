@@ -1,5 +1,6 @@
 package com.kiwi.controller;
 
+import com.kiwi.model.QuizInfo;
 import com.kiwi.model.ShopInfo;
 import com.kiwi.postgre.ConnectionProvider;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
@@ -13,9 +14,7 @@ import com.linecorp.bot.model.event.*;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
-import com.linecorp.bot.model.message.template.CarouselColumn;
-import com.linecorp.bot.model.message.template.CarouselTemplate;
-import com.linecorp.bot.model.message.template.ConfirmTemplate;
+import com.linecorp.bot.model.message.template.*;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
@@ -63,15 +62,18 @@ public class MessageController {
             final PostbackEvent postbackEvent = (PostbackEvent) event;
             //reply(handlePostbackEvent(postbackEvent));
             log.info("Postback Event start");
-
             String postackData = postbackEvent.getPostbackContent().getData();
+            log.info("postackData=" + postackData);
 
             ConnectionProvider connectionProvider = new ConnectionProvider();
             Connection connection = connectionProvider.getConnection();
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + postackData + "'");
 
-            sendCarouselMessage(postbackEvent.getReplyToken(), rs);
+            // 指定されたcategoryからランダムで1件取得する
+            ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
+
+            sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
+            sendImageCarouselMessage(postbackEvent.getReplyToken(), rs);
 
             stmt.close();
             connection.close();
@@ -90,22 +92,35 @@ public class MessageController {
         // connection
         ConnectionProvider connectionProvider = new ConnectionProvider();
         Connection connection = connectionProvider.getConnection();
-
-        // area存在チェック
-        String text = event.getMessage().getText();
         Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
-        if (rs.next()) {
-            // データが1件以上あり
+
+        if (event.getMessage().getText().equals("クイズ")) {
 
             // ユーザ情報取得
             if (event.getSource().getSenderId() != null) {
                 setUserProfile(event.getSource().getSenderId(), connection);
             }
 
-            // ○○をご案内いたしましょうか？ Yes, No
-            sendConfirmMessage(event.getReplyToken(), text);
+            ResultSet rs = stmt.executeQuery("SELECT * FROM QUIZ");
+            sendImageCarouselMessage(event.getReplyToken(), rs);
         }
+
+
+//        // area存在チェック
+//        String text = event.getMessage().getText();
+//        Statement stmt = connection.createStatement();
+//        ResultSet rs = stmt.executeQuery("SELECT * FROM SHOP WHERE area = '" + text + "' LIMIT 1");
+//        if (rs.next()) {
+//            // データが1件以上あり
+//
+//            // ユーザ情報取得
+//            if (event.getSource().getSenderId() != null) {
+//                setUserProfile(event.getSource().getSenderId(), connection);
+//            }
+//
+//            // ○○をご案内いたしましょうか？ Yes, No
+//            sendConfirmMessage(event.getReplyToken(), text);
+//        }
         stmt.close();
         connection.close();
     }
@@ -128,6 +143,38 @@ public class MessageController {
         TemplateMessage templateMessage = new TemplateMessage(
                 "this is a confirm template",
                 confirmTemplate);
+
+        ReplyMessage replyMessage = new ReplyMessage(
+                replyToken,
+                templateMessage
+        );
+        Response<BotApiResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .replyMessage(replyMessage)
+                        .execute();
+        log.info(response.code() + " " + response.message());
+    }
+
+    private void sendImageCarouselMessage(String replyToken, ResultSet rs) throws Exception {
+
+        List<ImageCarouselColumn> columns = new ArrayList<>();
+        while (rs.next()) {
+            QuizInfo quizInfo = new QuizInfo();
+//            quizInfo.setTitle(rs.getString("title"));
+//            quizInfo.setUri(rs.getString("uri"));
+//            quizInfo.setText(rs.getString("text"));
+            quizInfo.setCategory(rs.getString("category"));
+            quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            ImageCarouselColumn imageCarouselColumn = createImageCarouselColumn(quizInfo);
+            columns.add(imageCarouselColumn);
+        }
+
+        ImageCarouselTemplate imageCarouselTemplate = new ImageCarouselTemplate(columns);
+        TemplateMessage templateMessage = new TemplateMessage(
+                "this is a image carousel template",
+                imageCarouselTemplate);
 
         ReplyMessage replyMessage = new ReplyMessage(
                 replyToken,
@@ -186,6 +233,15 @@ public class MessageController {
                 shopInfo.getTitle(),
                 shopInfo.getText(),
                 actions);
+    }
+
+    private ImageCarouselColumn createImageCarouselColumn(QuizInfo quizInfo) throws Exception {
+
+        Action action = new PostbackAction("label", "animal", "text");
+
+        return new ImageCarouselColumn(
+                quizInfo.getThumbnailImageUrl(),
+                action);
     }
 
     private void setUserProfile(String userId, Connection connection) throws Exception {
