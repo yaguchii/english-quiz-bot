@@ -68,15 +68,20 @@ public class MessageController {
             Connection connection = connectionProvider.getConnection();
             Statement stmt = connection.createStatement();
 
-            if (postackData.equals("wrong") || postackData.equals("correct")) {
-                // quiz結果の処理
-                sendMessage(event.getSource().getSenderId(), postackData);
+            if (postackData.contains("wrong") || postackData.contains("correct")) {
+                // postackData is like "dog:wrong"
+                String category = postackData.split(":")[0];
+                String result = postackData.split(":")[1];
+
+                // 同じカテゴリでクイズ継続
+                sendMessage(event.getSource().getSenderId(), result);
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 5");
+                sendImageCarouselMessageForQeustion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
                 // 指定されたcategoryからランダムで5件取得する
                 ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
 
-//            sendMessage(event.getSource().getSenderId(), "Which is Canis lupus familiaris?");
                 sendImageCarouselMessageForQeustion(postbackEvent.getReplyToken(), rs, event);
             }
 
@@ -101,6 +106,8 @@ public class MessageController {
 
         if (event.getMessage().getText().equals("クイズ")) {
 
+            sendMessage(event.getSource().getSenderId(), "遊びたいカテゴリを選んでね！");
+
             // ユーザ情報取得
             if (event.getSource().getSenderId() != null) {
                 setUserProfile(event.getSource().getSenderId(), connection);
@@ -108,6 +115,10 @@ public class MessageController {
 
             ResultSet rs = stmt.executeQuery("SELECT * FROM QUIZ");
             sendImageCarouselMessage(event.getReplyToken(), rs);
+        }
+
+        if (event.getMessage().getText().equals("クイズ終わり")) {
+            sendMessage(event.getSource().getSenderId(), "遊んでくれてありがとう！");
         }
 
         stmt.close();
@@ -132,12 +143,11 @@ public class MessageController {
         // ランダムにnameを取得し質問する。answerのcolumnsのdataとtextをcorrectに書き換える
         Random rand = new Random();
         int num = rand.nextInt(4);
-        String answerName = quizInfos.get(num).getName();
-        String imageUrl = quizInfos.get(num).getThumbnailImageUrl();
-        sendMessage(event.getSource().getSenderId(), "Which is " + answerName + "?");
+        QuizInfo quizInfo = quizInfos.get(num);
+        sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
 
-        Action action = new PostbackAction("label", "correct");
-        ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(imageUrl, action);
+        Action action = new PostbackAction("", quizInfo.getCategory() + ":correct");
+        ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
 
@@ -202,8 +212,7 @@ public class MessageController {
 
     private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
 
-        Action action = new PostbackAction("label",
-                "wrong");
+        Action action = new PostbackAction("", quizInfo.getCategory() + ":wrong");
 
         return new ImageCarouselColumn(
                 quizInfo.getThumbnailImageUrl(),
