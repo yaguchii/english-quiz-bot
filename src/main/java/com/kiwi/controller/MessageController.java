@@ -76,6 +76,9 @@ public class MessageController {
                 // 同じカテゴリでクイズ継続
                 // send "correct" or "wrong"
                 sendMessage(event.getSource().getSenderId(), result);
+
+                Thread.sleep(1_000); // 1000ミリ秒Sleepする
+
                 // send "Next question."
                 sendMessage(event.getSource().getSenderId(), "OK.Next question.");
 
@@ -152,7 +155,7 @@ public class MessageController {
 
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
 
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":You got it!");
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":You got it!", quizInfo.getName());
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
