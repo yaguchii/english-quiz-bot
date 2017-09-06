@@ -86,8 +86,8 @@ public class MessageController {
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
-                // 指定されたcategoryからランダムで5件取得する
-                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 5");
+                // 指定されたcategoryからランダムで5->3件取得する
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 3");
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
             }
 
@@ -150,7 +150,7 @@ public class MessageController {
 
         // quizInfosからランダムに正解を選び、ユーザに質問する
         Random rand = new Random();
-        int num = rand.nextInt(4);
+        int num = rand.nextInt(2);
         QuizInfo quizInfo = quizInfos.get(num);
 
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
