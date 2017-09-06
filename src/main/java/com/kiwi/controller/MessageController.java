@@ -108,7 +108,7 @@ public class MessageController {
         Statement stmt = connection.createStatement();
 
         if (event.getMessage().getText().equals("quiz") ||
-                event.getMessage().getText().equals("Quiz")||
+                event.getMessage().getText().equals("Quiz") ||
                 event.getMessage().getText().equals("クイズ")) {
 
             sendMessage(event.getSource().getSenderId(), "Choose a category.");
@@ -206,12 +206,12 @@ public class MessageController {
     }
 
     private ImageCarouselColumn createImageCarouselColumn(QuizInfo quizInfo) throws Exception {
-        Action action = new PostbackAction(quizInfo.getCategory(), quizInfo.getCategory(), quizInfo.getCategory() + " quiz start!");
+        Action action = new PostbackAction(quizInfo.getCategory(), quizInfo.getCategory(), "Let's start with " + quizInfo.getCategory() + " quiz!");
         return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
     private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":Wrong!");
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":Wrong!", quizInfo.getName());
         return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
