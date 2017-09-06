@@ -150,7 +150,7 @@ public class MessageController {
 
         // quizInfosからランダムに正解を選び、ユーザに質問する
         Random rand = new Random();
-        int num = rand.nextInt(2);
+        int num = rand.nextInt(3);
         QuizInfo quizInfo = quizInfos.get(num);
 
         sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
