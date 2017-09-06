@@ -77,12 +77,12 @@ public class MessageController {
                 // send "correct" or "wrong"
                 sendMessage(event.getSource().getSenderId(), result);
 
-                Thread.sleep(1_000); // 1000ミリ秒Sleepする
+                Thread.sleep(500); // 1000->500ミリ秒Sleepする
 
                 // send "Next question."
                 sendMessage(event.getSource().getSenderId(), "OK.Next question.");
 
-                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 5");
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 3");
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
