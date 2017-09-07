@@ -130,8 +130,8 @@ public class MessageController {
             sendMessage(event.getSource().getSenderId(), "Choose a category😎");
 
             // ユーザ情報取得
-            if (event.getSource().getSenderId() != null) {
-                setUserProfile(event.getSource().getSenderId(), connection);
+            if (event.getSource().getUserId() != null) {
+                setUserProfile(event.getSource().getUserId(), connection);
             }
 
             ResultSet rs = stmt.executeQuery("SELECT * FROM QUIZ");
