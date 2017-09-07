@@ -9,6 +9,7 @@ import com.linecorp.bot.model.action.Action;
 import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.event.*;
 import com.linecorp.bot.model.event.message.TextMessageContent;
+import com.linecorp.bot.model.message.StickerMessage;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.template.ImageCarouselColumn;
@@ -30,6 +31,10 @@ import java.util.Random;
 @Slf4j
 @LineMessageHandler
 public class MessageController {
+
+    // result
+    private static final String RESULT_CORRECT = "correct";
+    private static final String RESULT_WRONG = "wrong";
 
     @EventMapping
     public void eventHandle(Event event) throws Exception {
@@ -68,17 +73,20 @@ public class MessageController {
             Connection connection = connectionProvider.getConnection();
             Statement stmt = connection.createStatement();
 
-            if (postackData.contains("Wrong!") || postackData.contains("You got it!")) {
+            if (postackData.contains(RESULT_CORRECT) || postackData.contains(RESULT_WRONG)) {
                 // postackData is like "dog:wrong"
                 String category = postackData.split(":")[0];
                 String result = postackData.split(":")[1];
 
-                // 同じカテゴリでクイズ継続
+                // sticker送信
+                sendSticker(event.getSource().getSenderId(), result);
+
                 // send "correct" or "wrong"
-                sendMessage(event.getSource().getSenderId(), result);
+//                sendMessage(event.getSource().getSenderId(), result);
 
                 Thread.sleep(500); // 1000->500ミリ秒Sleepする
 
+                // 同じカテゴリでクイズ継続
                 // send "Next question."
                 sendMessage(event.getSource().getSenderId(), "OK.Next question.");
 
@@ -153,9 +161,9 @@ public class MessageController {
         int num = rand.nextInt(3);
         QuizInfo quizInfo = quizInfos.get(num);
 
-        sendMessage(event.getSource().getSenderId(), "Which is " + quizInfo.getName() + "?");
+        sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getName() + "\"" + "?");
 
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":You got it!", quizInfo.getName());
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":" + RESULT_CORRECT, quizInfo.getName());
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
@@ -214,7 +222,7 @@ public class MessageController {
     }
 
     private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":Wrong!", quizInfo.getName());
+        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":" + RESULT_WRONG, quizInfo.getName());
         return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
@@ -252,4 +260,29 @@ public class MessageController {
         log.info(response.code() + " " + response.message());
     }
 
+    private void sendSticker(String destination, String result) throws Exception {
+
+        String packageId;
+        String stickerId;
+
+        if (result.equals(RESULT_CORRECT)) {
+            packageId = "1";
+            stickerId = "14";
+        } else {
+            packageId = "1";
+            stickerId = "113";
+        }
+        StickerMessage stickerMessage = new StickerMessage(packageId, stickerId);
+        PushMessage pushMessage = new PushMessage(
+                destination,
+                stickerMessage
+        );
+        Response<BotApiResponse> response =
+                LineMessagingServiceBuilder
+                        .create(System.getenv("LINE_BOT_CHANNEL_TOKEN"))
+                        .build()
+                        .pushMessage(pushMessage)
+                        .execute();
+        log.info(response.code() + " " + response.message());
+    }
 }
