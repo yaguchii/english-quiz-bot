@@ -138,7 +138,7 @@ public class MessageController {
         if (event.getMessage().getText().equals("end") ||
                 event.getMessage().getText().equals("End") ||
                 event.getMessage().getText().equals("終了")) {
-            sendMessage(event.getSource().getSenderId(), "Thank you for playing. see you!");
+            sendMessage(event.getSource().getSenderId(), "Thank you for playing. see you😎");
         }
 
         stmt.close();
