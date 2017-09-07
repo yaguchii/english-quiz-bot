@@ -124,7 +124,7 @@ public class MessageController {
                 event.getMessage().getText().equals("Quiz") ||
                 event.getMessage().getText().equals("クイズ")) {
 
-            sendMessage(event.getSource().getSenderId(), "Choose a category.");
+            sendMessage(event.getSource().getSenderId(), "Choose a category😎");
 
             // ユーザ情報取得
             if (event.getSource().getSenderId() != null) {
