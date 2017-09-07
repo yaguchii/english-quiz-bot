@@ -30,6 +30,9 @@ import java.util.*;
 @LineMessageHandler
 public class MessageController {
 
+    // select number
+    private static final int SELECT_NUM = 4;
+
     // result
     private static final String RESULT_CORRECT = "correct";
     private static final String RESULT_WRONG = "wrong";
@@ -92,12 +95,12 @@ public class MessageController {
                 // send "Next question."
                 sendMessage(event.getSource().getSenderId(), "OK.Next question.");
 
-                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT 3");
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + category + "' ORDER BY random() LIMIT " + SELECT_NUM);
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
                 // 指定されたcategoryからランダムで5->3件取得する
-                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT 3");
+                ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT " + SELECT_NUM);
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
             }
 
@@ -162,7 +165,7 @@ public class MessageController {
 
         // quizInfosからランダムに正解を選び、ユーザに質問する
         Random rand = new Random();
-        int num = rand.nextInt(3);
+        int num = rand.nextInt(SELECT_NUM);
         QuizInfo quizInfo = quizInfos.get(num);
 
         sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getName() + "\"" + "?");
