@@ -24,9 +24,7 @@ import retrofit2.Response;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Slf4j
 @LineMessageHandler
@@ -35,6 +33,10 @@ public class MessageController {
     // result
     private static final String RESULT_CORRECT = "correct";
     private static final String RESULT_WRONG = "wrong";
+
+    // result stickers
+    private static final String[] CORRECT_STICKERS = {"13", "14", "407", "125", "179"};
+    private static final String[] WRONG_STICKERS = {"7", "9", "16", "21", "108", "111", "403"};
 
     @EventMapping
     public void eventHandle(Event event) throws Exception {
@@ -133,7 +135,9 @@ public class MessageController {
             sendImageCarouselMessage(event.getReplyToken(), rs);
         }
 
-        if (event.getMessage().getText().equals("end")) {
+        if (event.getMessage().getText().equals("end") ||
+                event.getMessage().getText().equals("End") ||
+                event.getMessage().getText().equals("終了")) {
             sendMessage(event.getSource().getSenderId(), "Thank you for playing. see you!");
         }
 
@@ -265,12 +269,17 @@ public class MessageController {
         String packageId;
         String stickerId;
 
+        // シャッフルした配列からstickerを選択
         if (result.equals(RESULT_CORRECT)) {
+            List<String> list = Arrays.asList(CORRECT_STICKERS);
+            Collections.shuffle(list);
             packageId = "1";
-            stickerId = "14";
+            stickerId = list.get(0);
         } else {
+            List<String> list = Arrays.asList(WRONG_STICKERS);
+            Collections.shuffle(list);
             packageId = "1";
-            stickerId = "113";
+            stickerId = list.get(0);
         }
         StickerMessage stickerMessage = new StickerMessage(packageId, stickerId);
         PushMessage pushMessage = new PushMessage(
