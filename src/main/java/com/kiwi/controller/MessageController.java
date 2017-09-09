@@ -89,7 +89,7 @@ public class MessageController {
                 // send "correct" or "wrong"
 //                sendMessage(event.getSource().getSenderId(), result);
 
-                Thread.sleep(500); // 1000->500ミリ秒Sleepする
+//                Thread.sleep(500); // 1000->500ミリ秒Sleepする
 
                 // 同じカテゴリでクイズ継続
                 // send "Next question."
@@ -243,9 +243,9 @@ public class MessageController {
         if (response.isSuccessful()) {
             UserProfileResponse profile = response.body();
             Statement stmt = connection.createStatement();
-            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message) " +
-                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "') " +
-                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "'");
+            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message, count) " +
+                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "', 1) " +
+                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "', count = count + 1");
         } else {
             log.info(response.code() + " " + response.message());
         }
