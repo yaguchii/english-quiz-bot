@@ -244,8 +244,8 @@ public class MessageController {
             UserProfileResponse profile = response.body();
             Statement stmt = connection.createStatement();
             stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message, count) " +
-                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "', 1) " +
-                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "', count = count + 1");
+                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "', '1') " +
+                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "', count = 'count + 1'");
         } else {
             log.info(response.code() + " " + response.message());
         }
