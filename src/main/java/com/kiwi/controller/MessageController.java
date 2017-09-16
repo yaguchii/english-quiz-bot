@@ -1,5 +1,6 @@
 package com.kiwi.controller;
 
+import com.kiwi.model.DataInfo;
 import com.kiwi.model.QuizInfo;
 import com.kiwi.postgre.ConnectionProvider;
 import com.linecorp.bot.client.LineMessagingServiceBuilder;
@@ -130,7 +131,7 @@ public class MessageController {
             }
 
             ResultSet rs = stmt.executeQuery("SELECT * FROM QUIZ");
-            sendImageCarouselMessage(event.getReplyToken(), rs);
+            sendQuizList(event.getReplyToken(), rs);
         }
 
         if (event.getMessage().getText().equals("end") ||
@@ -146,32 +147,32 @@ public class MessageController {
     private void sendImageCarouselMessageForQuestion(String replyToken, ResultSet rs, Event event) throws Exception {
 
         List<ImageCarouselColumn> columns = new ArrayList<>();
-        List<QuizInfo> quizInfos = new ArrayList<>();
+        List<DataInfo> dataInfos = new ArrayList<>();
         while (rs.next()) {
-            QuizInfo quizInfo = new QuizInfo();
-            quizInfo.setCategory(rs.getString("category"));
-            quizInfo.setName(rs.getString("name"));
-            quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
-            quizInfo.setTitle(rs.getString("title"));
-            ImageCarouselColumn imageCarouselColumn = createImageCarouselColumnForQuestion(quizInfo);
+            DataInfo dataInfo = new DataInfo();
+            dataInfo.setCategory(rs.getString("category"));
+            dataInfo.setName(rs.getString("name"));
+            dataInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            dataInfo.setTitle(rs.getString("title"));
+            ImageCarouselColumn imageCarouselColumn = createImageCarouselColumnForQuestion(dataInfo);
 
             columns.add(imageCarouselColumn);
-            quizInfos.add(quizInfo);
+            dataInfos.add(dataInfo);
         }
 
         // quizInfosからランダムに正解を選び、ユーザに質問する
         Random rand = new Random();
         int num = rand.nextInt(SELECT_NUM);
-        QuizInfo quizInfo = quizInfos.get(num);
+        DataInfo dataInfo = dataInfos.get(num);
 
         // case of leader, ask title .
-        if (quizInfo.getCategory().equals("Leader")) {
-            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getTitle() + "\"" + "?");
+        if (dataInfo.getCategory().equals("Leader")) {
+            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + dataInfo.getTitle() + "\"" + "?");
         } else {
-            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getName() + "\"" + "?");
+            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + dataInfo.getName() + "\"" + "?");
         }
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":" + RESULT_CORRECT, quizInfo.getName());
-        ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
+        Action action = new PostbackAction("choose", dataInfo.getCategory() + ":" + RESULT_CORRECT, dataInfo.getName());
+        ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(dataInfo.getThumbnailImageUrl(), action);
 
         columns.set(num, imageCarouselColumn);
 
@@ -194,14 +195,13 @@ public class MessageController {
     }
 
 
-    private void sendImageCarouselMessage(String replyToken, ResultSet rs) throws Exception {
+    private void sendQuizList(String replyToken, ResultSet rs) throws Exception {
 
         List<ImageCarouselColumn> columns = new ArrayList<>();
         while (rs.next()) {
             QuizInfo quizInfo = new QuizInfo();
             quizInfo.setCategory(rs.getString("category"));
             quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
-            quizInfo.setTitle(rs.getString("title"));
             ImageCarouselColumn imageCarouselColumn = createImageCarouselColumn(quizInfo);
             columns.add(imageCarouselColumn);
         }
@@ -229,9 +229,9 @@ public class MessageController {
         return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
     }
 
-    private ImageCarouselColumn createImageCarouselColumnForQuestion(QuizInfo quizInfo) throws Exception {
-        Action action = new PostbackAction("choose", quizInfo.getCategory() + ":" + RESULT_WRONG, quizInfo.getName());
-        return new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
+    private ImageCarouselColumn createImageCarouselColumnForQuestion(DataInfo dataInfo) throws Exception {
+        Action action = new PostbackAction("choose", dataInfo.getCategory() + ":" + RESULT_WRONG, dataInfo.getName());
+        return new ImageCarouselColumn(dataInfo.getThumbnailImageUrl(), action);
     }
 
     private void setUserProfile(String userId, Connection connection) throws Exception {
