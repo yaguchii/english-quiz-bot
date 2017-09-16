@@ -86,11 +86,6 @@ public class MessageController {
                 // sticker送信
                 sendSticker(event.getSource().getSenderId(), result);
 
-                // send "correct" or "wrong"
-//                sendMessage(event.getSource().getSenderId(), result);
-
-//                Thread.sleep(500); // 1000->500ミリ秒Sleepする
-
                 // 同じカテゴリでクイズ継続
                 // send "Next question."
                 sendMessage(event.getSource().getSenderId(), "OK.Next question.");
@@ -99,7 +94,7 @@ public class MessageController {
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
 
             } else {
-                // 指定されたcategoryからランダムで5->3件取得する
+                // 指定されたcategoryからランダムで取得する
                 ResultSet rs = stmt.executeQuery("SELECT * FROM DATA WHERE category = '" + postackData + "' ORDER BY random() LIMIT " + SELECT_NUM);
                 sendImageCarouselMessageForQuestion(postbackEvent.getReplyToken(), rs, event);
             }
@@ -157,6 +152,7 @@ public class MessageController {
             quizInfo.setCategory(rs.getString("category"));
             quizInfo.setName(rs.getString("name"));
             quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            quizInfo.setTitle(rs.getString("title"));
             ImageCarouselColumn imageCarouselColumn = createImageCarouselColumnForQuestion(quizInfo);
 
             columns.add(imageCarouselColumn);
@@ -168,8 +164,12 @@ public class MessageController {
         int num = rand.nextInt(SELECT_NUM);
         QuizInfo quizInfo = quizInfos.get(num);
 
-        sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getName() + "\"" + "?");
-
+        // case of leader, ask title .
+        if (quizInfo.getCategory().equals("Leader")) {
+            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getTitle() + "\"" + "?");
+        } else {
+            sendMessage(event.getSource().getSenderId(), "Which is " + "\"" + quizInfo.getName() + "\"" + "?");
+        }
         Action action = new PostbackAction("choose", quizInfo.getCategory() + ":" + RESULT_CORRECT, quizInfo.getName());
         ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(quizInfo.getThumbnailImageUrl(), action);
 
@@ -201,6 +201,7 @@ public class MessageController {
             QuizInfo quizInfo = new QuizInfo();
             quizInfo.setCategory(rs.getString("category"));
             quizInfo.setThumbnailImageUrl(rs.getString("thumbnailImageUrl"));
+            quizInfo.setTitle(rs.getString("title"));
             ImageCarouselColumn imageCarouselColumn = createImageCarouselColumn(quizInfo);
             columns.add(imageCarouselColumn);
         }

@@ -7,4 +7,5 @@ public class QuizInfo {
     private String category;
     private String name;
     private String thumbnailImageUrl;
+    private String title;
 }
