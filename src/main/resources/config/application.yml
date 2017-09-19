@@ -1,2 +1,6 @@
+logging:
+  level:
+    com.kiwi: INFO
+    com.linecorp.bot.client.wire: WARN
 #server:
 #    port: 9000
