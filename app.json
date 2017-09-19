@@ -1,0 +1,44 @@
+{
+  "name": "english-quiz-bot",
+  "scripts": {
+  },
+  "env": {
+    "ADMINIUM_URL": {
+      "required": true
+    },
+    "DATABASE_URL": {
+      "required": true
+    },
+    "LINE_BOT_CHANNEL_SECRET": {
+      "required": true
+    },
+    "LINE_BOT_CHANNEL_TOKEN": {
+      "required": true
+    },
+    "NEW_RELIC_LICENSE_KEY": {
+      "required": true
+    },
+    "NEW_RELIC_LOG": {
+      "required": true
+    },
+    "PAPERTRAIL_API_TOKEN": {
+      "required": true
+    },
+    "PROCESS_SCHEDULER_URL": {
+      "required": true
+    }
+  },
+  "formation": {
+  },
+  "addons": [
+    "adminium",
+    "newrelic",
+    "papertrail",
+    "process-scheduler"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/java"
+    }
+  ]
+}
