@@ -18,6 +18,7 @@ import retrofit2.Response;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,9 +89,9 @@ class MessageController {
         if (response.isSuccessful()) {
             UserProfileResponse profile = response.body();
             Statement stmt = connection.createStatement();
-            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message) " +
-                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "') " +
-                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "'");
+            stmt.executeUpdate("INSERT INTO LINE_USER (user_id, display_name, picture_url, status_message, last_date) " +
+                    "VALUES ('" + userId + "', '" + profile.getDisplayName() + "', '" + profile.getPictureUrl() + "' , '" + profile.getStatusMessage() + "', '" + LocalDateTime.now() + "') " +
+                    "ON CONFLICT (user_id) DO UPDATE SET display_name = '" + profile.getDisplayName() + "', picture_url = '" + profile.getPictureUrl() + "' , status_message= '" + profile.getStatusMessage() + "', last_date= '" + LocalDateTime.now() + "'");
         } else {
             log.info(response.code() + " " + response.message());
         }
